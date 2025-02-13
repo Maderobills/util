@@ -1,0 +1,24 @@
+For a complete web design theme, you'll need a well-structured color palette that includes primary, secondary, background, and additional shades for different UI elements. Here’s a full list of theme colors:  
+
+### 🎨 **Core Colors**  
+1. **Primary** – The main brand color (used for buttons, links, highlights).  
+2. **Secondary** – A complementary color for accents, highlights, or alternative actions.  
+3. **Background** – The default background color of your app.  
+4. **Foreground** – Text and interactive elements that sit on the background.  
+
+### 🌟 **Extended Colors**  
+5. **Surface** – Used for cards, modals, and UI containers.  
+6. **Border/Outline** – Used for dividing sections, borders, and outlines.  
+7. **Muted** – A subtle color for less emphasized text, dividers, or backgrounds.  
+
+### ✅ **State & Feedback Colors**  
+8. **Success** – Used for success messages, badges, and positive actions.  
+9. **Warning** – For warnings, alerts, and potential issues.  
+10. **Error/Danger** – Used for errors, destructive actions, and alerts.  
+11. **Info** – For informational messages, tooltips, and notifications.  
+
+### 🌗 **Dark Mode Colors (if needed)**  
+12. **Dark Background** – A deep shade for dark mode backgrounds.  
+13. **Dark Surface** – Surface color in dark mode.  
+14. **Dark Foreground** – Text and interactive colors in dark mode.  
+

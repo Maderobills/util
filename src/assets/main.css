@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+    /* 🌞 Light Mode */
+    --color-primary: #318CE7; /* Sky Blue */
+    --color-secondary: #E78C31; /* Warm Orange */
+    --color-background: #F4F8FB; /* Light Grayish Blue */
+    --color-foreground: #1B3A57; /* Deep Navy */
+
+    --color-surface: #FFFFFF; /* White for cards, modals */
+    --color-outline: #8AB6E7; /* Soft Blue for borders */
+    --color-muted: #CBDFF5; /* Muted Light Blue */
+
+    --color-success: #31E78C; /* Soft Green */
+    --color-warning: #E7C231; /* Warm Yellow */
+    --color-error: #E7315C; /* Strong Red */
+    --color-info: #31A7E7; /* Light Cyan */
+
+    /* 🌙 Dark Mode */
+    --color-dark-primary: #1B5FA4; /* Deeper Blue */
+    --color-dark-secondary: #BF6B23; /* Deeper Orange */
+    --color-dark-background: #121826; /* Very Dark Blue */
+    --color-dark-foreground: #E3EAF5; /* Light Blue-Gray Text */
+
+    --color-dark-surface: #1E293B; /* Dark Gray-Blue for Modals */
+    --color-dark-outline: #3B82F6; /* Brighter Blue for Borders */
+    --color-dark-muted: #334155; /* Muted Dark Blue */
+
+    --color-dark-success: #1E865F; /* Deeper Green */
+    --color-dark-warning: #D4A11D; /* Deeper Yellow */
+    --color-dark-error: #B91C3F; /* Darker Red */
+    --color-dark-info: #1E90F2; /* Brighter Cyan */
+}

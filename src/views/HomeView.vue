@@ -1,8 +1,9 @@
 <script setup>
-import ThemeToggler from '@/components/ui/ThemeToggler.vue';
 
 </script>
 
 <template>
-  <ThemeToggler/>
+  <h1 class="text-4xl font-bold text-center text-foreground dark:text-dark-foreground">
+    Home View
+  </h1>
 </template>

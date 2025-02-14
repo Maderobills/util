@@ -16,4 +16,6 @@ const bannerMessage = ref({
 
 <template>
   <Text :msg="bannerMessage" />
+  <Text :msg="{ banner: 'just a text' }" />
+  
 </template>

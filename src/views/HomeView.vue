@@ -3,6 +3,7 @@
 import { ref } from 'vue';
 import Text from '../components/ui/Text.vue';
 import Button from '@/components/ui/Button.vue';
+import { AlertCircle, Ban, Bell, CheckCircle, Info, SpellCheck } from 'lucide-vue-next';
 
 const bannerMessage = ref({
   banner: 'Welcome to Our Site!',
@@ -24,13 +25,13 @@ const handleClicksecondary = () => alert('Secondary!');
 const handleClicksurface = () => alert('Surface!');
 
 const btnText = ref([
-  { primary: 'Primary', onClick: handleClickprimary },
-  { success: 'Success', onClick: handleClicksuccess },
-  { error: 'Error', onClick: handleClickerror },
-  { warning: 'Warning', onClick: handleClickwarning },
-  { info: 'Info', onClick: handleClickinfo },
-  { secondary: 'Secondary', onClick: handleClicksecondary },
-  { surface: 'Surface', onClick: handleClicksurface }
+  { primary: 'Primary', onClick: handleClickprimary, icon: SpellCheck },
+  { success: 'Success', onClick: handleClicksuccess, icon: CheckCircle },
+  { error: 'Error', onClick: handleClickerror, icon: Ban},
+  { warning: 'Warning', onClick: handleClickwarning, icon: AlertCircle},
+  { info: 'Info', onClick: handleClickinfo, icon: Info},
+  { secondary: 'Secondary', onClick: handleClicksecondary, icon: Bell},
+  { surface: 'Surface', onClick: handleClicksurface, icon: Bell}
 ]);
 
 const handleClick = () => alert('Success!');

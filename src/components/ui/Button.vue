@@ -23,50 +23,57 @@ const handleClick = (handler) => {
       <button 
         v-if="btn.primary" 
         @click="handleClick(btn.onClick)" 
-        class="bg-primary dark:bg-dark-primary text-white px-4 py-1 shadow rounded-md"
+        class="bg-primary dark:bg-dark-primary text-white px-4 py-1 shadow rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.primary }}
       </button>
       <button 
         v-if="btn.success" 
         @click="handleClick(btn.onClick)" 
-        class="bg-success dark:bg-dark-success text-white px-4 py-1 shadow rounded-md"
+        class="bg-success dark:bg-dark-success text-white px-4 py-1 shadow rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.success }}
       </button>
       <button 
         v-if="btn.error" 
         @click="handleClick(btn.onClick)" 
-        class="bg-error dark:bg-dark-error text-white px-4 py-1 shadow rounded-md"
+        class="bg-error dark:bg-dark-error text-white px-4 py-1 shadow rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.error }}
       </button>
       <button 
         v-if="btn.warning" 
         @click="handleClick(btn.onClick)" 
-        class="bg-warning dark:bg-dark-warning text-white px-4 py-1 shadow rounded-md"
+        class="bg-warning dark:bg-dark-warning text-white px-4 py-1 shadow rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.warning }}
       </button>
       <button 
         v-if="btn.info" 
         @click="handleClick(btn.onClick)" 
-        class="bg-info dark:bg-dark-info text-white px-4 py-1 shadow rounded-md"
+        class="bg-info dark:bg-dark-info text-white px-4 py-1 shadow rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.info }}
       </button>
       <button 
         v-if="btn.secondary" 
         @click="handleClick(btn.onClick)" 
-        class="bg-secondary dark:bg-dark-secondary text-white px-4 py-1 shadow rounded-md"
+        class="bg-secondary dark:bg-dark-secondary text-white px-4 py-1 shadow rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.secondary }}
       </button>
       <button 
         v-if="btn.surface" 
         @click="handleClick(btn.onClick)" 
-        class="shadow-2xl shadow-foreground dark:shadow-dark-foreground border-foreground dark:border-dark-foreground text-foreground dark:text-dark-foreground px-4 py-1 rounded-md"
+        class="shadow-2xl shadow-foreground dark:shadow-dark-foreground border-foreground dark:border-dark-foreground text-foreground dark:text-dark-foreground px-4 py-1 rounded-md inline-flex items-center gap-2"
       >
+        <component :is="btn.icon" v-if="btn.icon" class="w-4 h-4" />
         {{ btn.surface }}
       </button>
     </template>

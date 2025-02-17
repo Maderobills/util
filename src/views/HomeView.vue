@@ -4,7 +4,11 @@ import { ref } from 'vue';
 import Text from '../components/ui/Text.vue';
 import Button from '@/components/ui/Button.vue';
 import { AlertCircle, Ban, Bell, CheckCircle, Info, SpellCheck } from 'lucide-vue-next';
-import { Notivue, NotivueSwipe, Notification, push } from 'notivue';
+import {
+  Notivue, NotificationProgress,
+  Notification,
+  outlinedIcons, push
+} from 'notivue';
 
 const bannerMessage = ref({
   banner: 'Welcome to Our Site!',
@@ -28,18 +32,18 @@ const handleClicksurface = () => alert('Surface!');
 const btnText = ref([
   { primary: 'Primary', onClick: handleClickprimary, icon: SpellCheck },
   { success: 'Success', onClick: handleClicksuccess, icon: CheckCircle },
-  { error: 'Error', onClick: handleClickerror, icon: Ban},
-  { warning: 'Warning', onClick: handleClickwarning, icon: AlertCircle},
-  { info: 'Info', onClick: handleClickinfo, icon: Info},
-  { secondary: 'Secondary', onClick: handleClicksecondary, icon: Bell},
-  { surface: 'Surface', onClick: handleClicksurface, icon: Bell}
+  { error: 'Error', onClick: handleClickerror, icon: Ban },
+  { warning: 'Warning', onClick: handleClickwarning, icon: AlertCircle },
+  { info: 'Info', onClick: handleClickinfo, icon: Info },
+  { secondary: 'Secondary', onClick: handleClicksecondary, icon: Bell },
+  { surface: 'Surface', onClick: handleClicksurface, icon: Bell }
 ]);
 
 const handleClick = () => alert('Success!');
 </script>
 
 <template>
- <!-- <Text :msg="bannerMessage" />
+  <!-- <Text :msg="bannerMessage" />
   <Text :msg="{ banner: 'just a text' }" />
   <Button :btnText="btnText" />
   <Button 
@@ -52,6 +56,10 @@ const handleClick = () => alert('Success!');
   </button>
 
   <Notivue v-slot="item">
-    <Notification :item="item" />
+    <Notification :item="item">
+      <NotificationProgress :item="item"
+      :icons="outlinedIcons"/>
+    </Notification>
   </Notivue>
+    
 </template>

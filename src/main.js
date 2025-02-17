@@ -8,6 +8,8 @@ import App from './App.vue'
 import router from './router'
 import 'notivue/notification.css' 
 import 'notivue/animations.css'
+import 'notivue/notification-progress.css'
+
 
 const notivue = createNotivue()
 

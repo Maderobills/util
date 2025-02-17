@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import Text from '../components/ui/Text.vue';
 import Button from '@/components/ui/Button.vue';
 import { AlertCircle, Ban, Bell, CheckCircle, Info, SpellCheck } from 'lucide-vue-next';
+import { Notivue, NotivueSwipe, Notification, push } from 'notivue';
 
 const bannerMessage = ref({
   banner: 'Welcome to Our Site!',
@@ -38,11 +39,19 @@ const handleClick = () => alert('Success!');
 </script>
 
 <template>
-  <Text :msg="bannerMessage" />
+ <!-- <Text :msg="bannerMessage" />
   <Text :msg="{ banner: 'just a text' }" />
   <Button :btnText="btnText" />
   <Button 
     :btnText="[{ primary: 'Button' }]" 
     @click="handleClick"
-  />
+  />-->
+
+  <button @click="push.success('Hello from your first notification!')">
+    Push
+  </button>
+
+  <Notivue v-slot="item">
+    <Notification :item="item" />
+  </Notivue>
 </template>

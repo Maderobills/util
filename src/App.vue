@@ -14,6 +14,7 @@ const handleThemeChange = () => {
   }, 1000);
 };
 
+
 // Watch for theme changes
 watch(isDark, () => {
   handleThemeChange();

@@ -2,13 +2,16 @@
 import { ref, watch } from 'vue';
 import Text from '../components/ui/Text.vue';
 import Button from '@/components/ui/Button.vue';
-import { AlertCircle, Ban, Bell, CheckCircle, Info, SpellCheck } from 'lucide-vue-next';
+import { AlertCircle, Ban, Bell, CheckCircle, ChevronRight, Home, Info, SpellCheck } from 'lucide-vue-next';
 import {
   Notivue, NotificationProgress,
   Notification,
   outlinedIcons, push
 } from 'notivue';
 import InputField from '@/components/ui/InputField.vue';
+import { Breadcrumb } from 'primevue';
+import { useBreadCrumbStore } from '@/stores/breadCrumb';
+import BreadCrumb from '@/components/ui/BreadCrumb.vue';
 
 // Input value refs
 const searchValue = ref('');
@@ -134,9 +137,22 @@ const btnText = ref([
   { secondary: 'Secondary', onClick: handleClicksecondary, icon: Bell },
   { surface: 'Surface', onClick: handleClicksurface, icon: Bell }
 ]);
+
+// Setup breadcrumbs
+const breadcrumbStore = useBreadCrumbStore();
+    
+// Set full breadcrumb path
+breadcrumbStore.setBreadcrumbs([
+  { label: 'Home', route: '/', icon: 'home' },
+  { label: 'Products', route: '/products', icon: 'file' },
+  { label: 'Product Details', route: null, icon: null }
+]);
 </script>
 
 <template>
+
+  <BreadCrumb/>
+
   <Text :msg="bannerMessage" />
   <Button :btnText="btnText" />
   <Text :msg="{ heading: emailValue }" />

@@ -15,10 +15,11 @@ const props = defineProps(['msg']);
     <div v-if="msg.body" class="text-foreground dark:text-dark-foreground font-normal">
         <h4 class="2xl:text-2xl lg:text-lg md:text-base text-xs">{{ msg.body }}</h4>
     </div>
-    <div v-if="msg.success || msg.error || msg.warning || msg.info" class="font-normal 2xl:text-2xl lg:text-lg md:text-base text-xs">
+    <div v-if="msg.success || msg.error || msg.warning || msg.info || msg.mute" class="font-normal 2xl:text-2xl lg:text-lg md:text-base text-xs">
         <h4 v-if="msg.success" class="text-success dark:text-dark-success">Success: {{ msg.success }}</h4>
         <h4 v-if="msg.error" class="text-error dark:text-dark-error">Error: {{ msg.error }}</h4>
         <h4 v-if="msg.warning" class="text-warning dark:text-dark-warning">Warning: {{ msg.warning }}</h4>
-        <h4 v-if="msg.info" class="text-info dark:text-dark-info">Info: {{ msg.info }}</h4>
+        <h4 v-if="msg.info" class="text-info dark:text-dark-info">{{ msg.info }}</h4>
+        <h4 v-if="msg.mute" class="text-muted dark:text-dark-muted">{{ msg.mute }}</h4>
     </div>
 </template>

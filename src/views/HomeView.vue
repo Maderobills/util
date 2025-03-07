@@ -12,6 +12,7 @@ import InputField from '@/components/ui/InputField.vue';
 import { Breadcrumb } from 'primevue';
 import { useBreadCrumbStore } from '@/stores/breadCrumb';
 import BreadCrumb from '@/components/ui/BreadCrumb.vue';
+import router from '@/router';
 
 // Input value refs
 const searchValue = ref('');
@@ -125,6 +126,7 @@ const handleClicksecondary = () => {
 };
 const handleClicksurface = () => {
   push.info('Surface action triggered!');
+  router.push('/tabs')
 };
 
 // Button configuration
@@ -144,7 +146,7 @@ const breadcrumbStore = useBreadCrumbStore();
 // Set full breadcrumb path
 breadcrumbStore.setBreadcrumbs([
   { label: 'Home', route: '/', icon: 'home' },
-  { label: 'Products', route: '/products', icon: 'file' },
+  { label: 'Products', route: '/tabs', icon: 'file' },
   { label: 'Product Details', route: null, icon: null }
 ]);
 </script>

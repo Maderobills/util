@@ -9,7 +9,8 @@ import router from './router'
 import 'notivue/notification.css' 
 import 'notivue/animations.css'
 import 'notivue/notification-progress.css'
-import { PrimeVue } from '@primevue/core'
+import PrimeVue from 'primevue/config';
+import Aura from '@primeuix/themes/aura';
 
 
 const notivue = createNotivue()
@@ -18,6 +19,15 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(notivue)
-app.use(PrimeVue)
+app.use(PrimeVue,{
+    theme: {
+        preset: Aura,
+        options: {
+            prefix: 'p',
+            darkModeSelector: '.dark',
+            cssLayer: false
+        }
+      },
+})
 
 app.mount('#app')

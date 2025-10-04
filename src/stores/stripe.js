@@ -32,7 +32,7 @@ export const useStripeStore = defineStore("stripe", {
       try {
         // Don't need Stripe.js for server-side checkout
         // Create checkout session on your backend
-        const response = await fetch("http://localhost:3000/api/create-checkout-session", {
+        const response = await fetch("https://util-sxxx.onrender.com/api/create-checkout-session", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

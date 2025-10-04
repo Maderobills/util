@@ -138,7 +138,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Stripe server running' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Checkout endpoint: http://localhost:${PORT}/api/create-checkout-session`);

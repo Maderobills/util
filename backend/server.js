@@ -116,8 +116,8 @@ app.post('/api/paymongo/create-checkout', async (req, res) => {
           ],
           payment_method_types: ['card', 'gcash'],
           metadata,
-          success_url: 'http://localhost:5173/payment-success',
-          cancel_url: 'http://localhost:5173/payment-cancelled',
+          success_url: 'http://localhost:5173',
+          cancel_url: 'http://localhost:5173/payment',
         },
       },
     }

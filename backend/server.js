@@ -101,7 +101,7 @@ app.post('/api/paymongo/create-checkout', async (req, res) => {
         attributes: {
           amount: Math.round(amount * 100), // PayMongo expects centavos
           currency,
-          description: description || 'Payment',
+          description:  description || 'Payment',
           billing: {
             name: email.split('@')[0],
             email,

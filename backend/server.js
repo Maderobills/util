@@ -1,251 +1,198 @@
-// server.js
-import express from 'express';
-import cors from 'cors';
-import Stripe from 'stripe';
-import dotenv from 'dotenv';
-import axios from 'axios'; // ✅ For PayMongo API calls
-import crypto from 'crypto'; // ✅ For webhook signature verification
-
+import express from "express";
+import cors from "cors";
+import axios from "axios";
+import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-// ✅ CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:5173',  // Vite frontend (development)
-    'http://localhost:3000'   // optional, if you sometimes run frontend here
-  ],
+  origin: ["http://localhost:5173", "http://localhost:3000"],
   credentials: true
 }));
-
-// ⚠️ For Stripe webhook, must use raw body
-app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
-
-// ✅ For other routes (Stripe normal + PayMongo), use JSON
 app.use(express.json());
 
-// ====================================================
-// 🟣 STRIPE CHECKOUT ENDPOINT
-// ====================================================
-app.post('/api/create-checkout-session', async (req, res) => {
-  try {
-    const { amount, currency, metadata } = req.body;
+const {
+  MONEYGRAM_CLIENT_ID,
+  MONEYGRAM_CLIENT_SECRET,
+  MONEYGRAM_API_BASE_URL,      // e.g. sandbox or production base URL
+  MONEYGRAM_AGENT_PARTNER_ID,  // your assigned partner/agent ID
+  // optionally other config (posId, operatorId, etc.)
+} = process.env;
 
-    console.log('📝 Creating Stripe checkout session:', { amount, currency, metadata });
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid amount' });
-    }
-
-    if (!metadata?.customerEmail) {
-      return res.status(400).json({ error: 'Customer email is required' });
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: currency || 'usd',
-            product_data: {
-              name: metadata.packageType || 'Subscription Package',
-              description: metadata.packageDescription || '',
-            },
-            unit_amount: amount, // in cents
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/payment-cancelled`,
-      customer_email: metadata.customerEmail,
-      metadata: {
-        packageType: metadata.packageType,
-        customerEmail: metadata.customerEmail,
+// Helper: get OAuth 2 access token
+async function getMoneyGramToken() {
+  const tokenUrl = `${MONEYGRAM_API_BASE_URL}/oauth2/token`;
+  const resp = await axios.post(
+    tokenUrl,
+    new URLSearchParams({ grant_type: "client_credentials" }),
+    {
+      auth: {
+        username: MONEYGRAM_CLIENT_ID,
+        password: MONEYGRAM_CLIENT_SECRET,
       },
-    });
-
-    console.log('✅ Stripe session created:', session.id);
-
-    res.json({
-      sessionId: session.id,
-      url: session.url,
-    });
-  } catch (error) {
-    console.error('❌ Stripe checkout error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ====================================================
-// 🟡 PAYMONGO CHECKOUT ENDPOINT
-// ====================================================
-app.post('/api/paymongo/create-checkout', async (req, res) => {
-  try {
-    let { amount, currency, email, description, metadata } = req.body
-
-    // ✅ Convert USD → PHP if needed
-    if (currency === 'USD') {
-      const conversionRate = 58 // You can replace this with a live API later
-      amount = amount * conversionRate
-      currency = 'PHP'
-      console.log(`💱 Converted USD to PHP: ${amount} PHP`)
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
     }
+  );
+  return resp.data.access_token;
+}
 
-    // ✅ Build PayMongo payload
+// 1️⃣ Quote endpoint
+app.post("/api/moneygram/quote", async (req, res) => {
+  try {
+    const { sendAmount, sendCurrency, destinationCountryCode, serviceOptionCode } = req.body;
+
+    const token = await getMoneyGramToken();
+
     const payload = {
-      data: {
-        attributes: {
-          amount: Math.round(amount * 100), // PayMongo expects centavos
-          currency,
-          description:  description || 'Payment',
-          billing: {
-            name: email.split('@')[0],
-            email,
-          },
-          line_items: [
-            {
-              name: metadata?.packageType || 'Package',
-              amount: Math.round(amount * 100),
-              currency,
-              quantity: 1,
-            },
-          ],
-          payment_method_types: ['card', 'gcash'],
-          metadata,
-          success_url: 'http://localhost:5173',
-          cancel_url: 'http://localhost:5173/payment',
-        },
+      targetAudience: "CONSUMER",  // or “CONSUMER_FACING”
+      agentPartnerId: MONEYGRAM_AGENT_PARTNER_ID,
+      destinationCountryCode,
+      serviceOptionCode, // optional: you may restrict to a specific service
+      sendAmount: {
+        value: sendAmount,
+        currencyCode: sendCurrency,
       },
-    }
+      // optionally: receiveCurrencyCode, etc.
+    };
 
-    // ✅ Send to PayMongo
-    const response = await axios.post(
-      'https://api.paymongo.com/v1/checkout_sessions',
+    const resp = await axios.post(
+      `${MONEYGRAM_API_BASE_URL}/transfer/v1/transactions/quote`,
       payload,
       {
         headers: {
-          Authorization: `Basic ${Buffer.from(process.env.PAYMONGO_SECRET_KEY + ':').toString('base64')}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       }
-    )
+    );
 
-    res.json({ url: response.data.data.attributes.checkout_url })
-  } catch (error) {
-    console.error('❌ PayMongo checkout error:', error.response?.data || error.message)
-    res.status(500).json({
-      error: 'Failed to create PayMongo checkout session',
-      details: error.response?.data,
-    })
-  }
-})
-
-
-// ====================================================
-// 🟢 STRIPE WEBHOOK
-// ====================================================
-app.post('/api/stripe-webhook', async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    res.json(resp.data);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error("MoneyGram quote error:", err.response?.data || err.message);
+    res.status(500).json({
+      error: "Failed to quote MoneyGram transaction",
+      details: err.response?.data || err.message,
+    });
   }
-
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
-      console.log('✅ Stripe payment successful:', session.id);
-      await handleSuccessfulPayment(session);
-      break;
-
-    case 'checkout.session.expired':
-      console.log('⌛ Stripe session expired:', event.data.object.id);
-      break;
-
-    case 'payment_intent.payment_failed':
-      console.log('❌ Stripe payment failed:', event.data.object.id);
-      break;
-
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
-  }
-
-  res.json({ received: true });
 });
 
-// ====================================================
-// 🟠 PAYMONGO WEBHOOK (optional but recommended)
-// ====================================================
-app.post('/api/paymongo-webhook', express.json({ type: 'application/json' }), async (req, res) => {
+// 2️⃣ Update transaction with sender / receiver / compliance
+app.put("/api/moneygram/update/:transactionId", async (req, res) => {
   try {
-    const signature = req.headers['paymongo-signature'];
-    const body = JSON.stringify(req.body);
-    const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    const { transactionId } = req.params;
+    const { sender, receiver, transactionDetails, targetAccount } = req.body;
 
-    // Validate webhook signature (optional)
-    if (signature && secret) {
-      const hmac = crypto.createHmac('sha256', secret).update(body).digest('hex');
-      if (hmac !== signature) {
-        console.warn('⚠️ Invalid PayMongo webhook signature');
-        return res.status(400).send('Invalid signature');
+    const token = await getMoneyGramToken();
+
+    const payload = {
+      sender,
+      receiver,
+      transactionDetails,
+      targetAccount, // for bank or wallet deposit modes
+    };
+
+    const resp = await axios.put(
+      `${MONEYGRAM_API_BASE_URL}/transfer/v1/transactions/${transactionId}`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    }
+    );
 
-    const event = req.body.data;
-    console.log('📩 PayMongo webhook event:', event.attributes.type);
+    res.json(resp.data);
+  } catch (err) {
+    console.error("MoneyGram update error:", err.response?.data || err.message);
+    res.status(500).json({
+      error: "Failed to update MoneyGram transaction",
+      details: err.response?.data || err.message,
+    });
+  }
+});
 
-    if (event.attributes.type === 'checkout_session.payment_paid') {
-      const checkout = event.attributes.data.attributes;
-      console.log('✅ PayMongo payment successful:', checkout.reference_number);
-      // TODO: handle success logic here
-    }
+// 3️⃣ Commit transaction
+app.put("/api/moneygram/commit/:transactionId", async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const token = await getMoneyGramToken();
+
+    const resp = await axios.put(
+      `${MONEYGRAM_API_BASE_URL}/transfer/v1/transactions/${transactionId}/commit`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json(resp.data);
+  } catch (err) {
+    console.error("MoneyGram commit error:", err.response?.data || err.message);
+    res.status(500).json({
+      error: "Failed to commit MoneyGram transaction",
+      details: err.response?.data || err.message,
+    });
+  }
+});
+
+// Webhook endpoint (if MoneyGram pushes events)
+app.post("/api/moneygram/webhook", express.json(), (req, res) => {
+  try {
+    const event = req.body;
+    console.log("MoneyGram webhook received:", event);
+
+    // Process event.type (e.g. transfer.completed, etc.)
+    // Update your DB records accordingly
 
     res.json({ received: true });
-  } catch (error) {
-    console.error('❌ PayMongo webhook error:', error.message);
-    res.status(400).send(`Webhook Error: ${error.message}`);
+  } catch (err) {
+    console.error("MoneyGram webhook handler error:", err.message);
+    res.status(400).json({ error: err.message });
   }
 });
 
-// ====================================================
-// 💾 Helper: Handle successful payments (shared logic)
-// ====================================================
-async function handleSuccessfulPayment(session) {
-  const { customer_email, metadata } = session;
+// (Optional) Status endpoint (polling)
+app.get("/api/moneygram/status/:transactionId", async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const token = await getMoneyGramToken();
 
-  console.log('Processing order for:', customer_email);
-  console.log('Package type:', metadata.packageType);
+    const resp = await axios.get(
+      `${MONEYGRAM_API_BASE_URL}/transfer/v1/transactions/${transactionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-  // TODO:
-  // 1. Update user subscription in your database
-  // 2. Send confirmation email
-  // 3. Grant premium access
-  // 4. Log transaction
-}
-
-// ====================================================
-// 🩺 Health Check
-// ====================================================
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Stripe + PayMongo server running' });
+    res.json(resp.data);
+  } catch (err) {
+    console.error("MoneyGram status check error:", err.response?.data || err.message);
+    res.status(500).json({
+      error: "Failed to fetch status",
+      details: err.response?.data || err.message,
+    });
+  }
 });
 
-// ====================================================
-// 🚀 Start Server
-// ====================================================
-const PORT = process.env.PORT || 5173;
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "MoneyGram service running" });
+});
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🧾 Stripe endpoint: http://localhost:${PORT}/api/create-checkout-session`);
-  console.log(`🪙 PayMongo endpoint: http://localhost:${PORT}/api/paymongo/create-checkout`);
+  console.log(`Server listening on port ${PORT}`);
+  console.log(`MoneyGram quote: POST /api/moneygram/quote`);
+  console.log(`MoneyGram update: PUT /api/moneygram/update/:transactionId`);
+  console.log(`MoneyGram commit: PUT /api/moneygram/commit/:transactionId`);
+  console.log(`MoneyGram webhook: /api/moneygram/webhook`);
+  console.log(`MoneyGram status: GET /api/moneygram/status/:transactionId`);
 });

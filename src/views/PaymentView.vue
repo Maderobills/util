@@ -5,20 +5,23 @@ import Packages from '@/stores/packages'
 import { usePaystackStore } from '@/stores/paystack'
 import { useStripeStore } from '@/stores/stripe'
 import { useBinanceStore } from '@/stores/binance'
-import { usePaymongoStore } from '@/stores/paymongo'   // ✅ NEW
-import router from '@/router'
+import { usePaymongoStore } from '@/stores/paymongo'
+import { useMoneyGramStore } from '@/stores/moneygram'
 
 const paystackStore = usePaystackStore()
 const stripeStore = useStripeStore()
 const binanceStore = useBinanceStore()
-const paymongoStore = usePaymongoStore()  // ✅ NEW
+const paymongoStore = usePaymongoStore()
+const moneygramStore = useMoneyGramStore()  // ✅ NEW
 
 onMounted(() => {
   console.log('=== Environment Variables Debug ===')
   console.log('All env vars:', import.meta.env)
   console.log('Binance API Key:', import.meta.env.VITE_BINANCE_API_KEY)
   console.log('Paymongo Public Key:', import.meta.env.VITE_PAYMONGO_PUBLIC_KEY)
+  console.log('MoneyGram API Key:', import.meta.env.VITE_MONEYGRAM_API_KEY)
   console.log('Binance Secret exists:', !!import.meta.env.VITE_BINANCE_API_SECRET)
+  console.log('MoneyGram Secret exists:', !!import.meta.env.VITE_MONEYGRAM_API_SECRET)
   console.log('==================================')
 })
 
@@ -50,6 +53,11 @@ function selectPackage(packageData) {
     processPaymongoPayment(packageData, email)
       .then((res) => console.log("PayMongo payment success:", res))
       .catch((err) => console.error("PayMongo payment failed:", err.message))
+  }
+  else if (paymentMethod.value === 'moneygram') {
+    processMoneygramPayment(packageData, email)
+      .then((res) => console.log("MoneyGram payment success:", res))
+      .catch((err) => console.error("MoneyGram payment failed:", err.message))
   }
 }
 
@@ -117,8 +125,7 @@ const processBinancePayment = async (packageData, emailValue) => {
   }
 }
 
-// ✅ Process payment with PayMongo
-
+// Process payment with PayMongo
 async function processPaymongoPayment(packageData) {
   try {
     const checkoutUrl = await paymongoStore.createCheckoutSession(
@@ -135,8 +142,50 @@ async function processPaymongoPayment(packageData) {
   }
 }
 
+// ✅ Process payment with MoneyGram
+async function processMoneygramPayment(packageData, emailValue) {
+  try {
+    const sender = {
+      name: emailValue.split("@")[0],
+      email: emailValue,
+    }
+
+    const receiver = {
+      name: "Receiver Name",  // You can prompt the user for this
+      country: "Philippines",
+    }
+
+    // Call your backend through the Pinia store
+    const response = await moneygramStore.sendMoney(
+      packageData.price,
+      "USD",
+      receiver,
+      sender
+    )
+
+    console.log("MoneyGram response:", response)
+
+    if (response.status === "pending") {
+      // Show transaction info to the user
+      alert(
+        `✅ Transaction Created!\nReference: ${response.transactionId}\nPlease complete payment at any MoneyGram agent.\nEstimated arrival: ${new Date(
+          response.estimatedArrival
+        ).toLocaleString()}`
+      )
+    } else {
+      alert(`Payment status: ${response.status}`)
+    }
+
+    return response
+  } catch (error) {
+    console.error("MoneyGram payment error:", error)
+    alert(`MoneyGram payment failed: ${error.message}`)
+    throw error
+  }
+}
 
 </script>
+
 <template>
   <div>
     <h1 class="text-4xl font-bold text-center text-foreground dark:text-dark-foreground mb-4">
@@ -188,6 +237,17 @@ async function processPaymongoPayment(packageData) {
         ]"
       >
         Pay with PayMongo
+      </button>
+      <button
+        @click="paymentMethod = 'moneygram'"
+        :class="[
+          'px-6 py-2 rounded-lg font-semibold transition-colors',
+          paymentMethod === 'moneygram'
+            ? 'bg-red-600 text-white'
+            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+        ]"
+      >
+        Pay with MoneyGram
       </button>
     </div>
 

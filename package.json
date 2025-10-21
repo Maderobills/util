@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@paypal/paypal-server-sdk": "^1.0.0",
     "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/vite": "^4.0.6",
     "@vueuse/core": "^12.5.0",
     "axios": "^1.12.2",
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.3",

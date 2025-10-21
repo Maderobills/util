@@ -1,161 +1,114 @@
 // stores/paypal.js
-import { defineStore } from 'pinia'
+import { defineStore } from "pinia";
 
-export const usePaypalStore = defineStore('paypal', {
+export const usePaypalStore = defineStore("paypal", {
   state: () => ({
     clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
     isLoading: false,
-    error: null
+    error: null,
   }),
 
   actions: {
     /**
-     * Create PayPal order
-     * @param {number} amount - Amount in USD
-     * @param {string} currency - Currency code (default: USD)
-     * @param {object} metadata - Additional order metadata
-     * @returns {Promise<object>} Order details
+     * Create PayPal payment using PayPal SDK buttons
+     * @param {number} amount - Payment amount
+     * @param {string} currency - Currency code (USD, EUR, etc.)
+     * @param {object} metadata - Additional data (packageType, customerEmail, etc.)
+     * @param {object} callbacks - { callback: successFn, onClose: cancelFn }
      */
-    async createOrder(amount, currency = 'USD', metadata = {}) {
-      this.isLoading = true
-      this.error = null
+    createPayment(amount, currency = "USD", metadata = {}, callbacks = {}) {
+      this.isLoading = true;
+      this.error = null;
 
-      try {
-        // Call your backend API to create a PayPal order
-        const response = await fetch('/api/paypal/create-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: amount.toString(),
-            currency,
-            metadata
-          })
-        })
+      const { callback, onClose } = callbacks;
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Failed to create PayPal order')
-        }
-
-        const data = await response.json()
-        return data
-      } catch (error) {
-        this.error = error.message
-        console.error('PayPal order creation error:', error)
-        throw error
-      } finally {
-        this.isLoading = false
+      // Wait for PayPal SDK to be ready
+      if (!window.paypal) {
+        this.error = "PayPal SDK not loaded";
+        this.isLoading = false;
+        throw new Error("PayPal SDK not loaded");
       }
-    },
 
-    /**
-     * Initialize PayPal Smart Payment Buttons
-     * @param {number} amount - Amount in USD
-     * @param {string} currency - Currency code
-     * @param {object} metadata - Additional metadata
-     * @param {object} options - Callback options
-     */
-    async initializePayPalButtons(amount, currency = 'USD', metadata = {}, options = {}) {
-      return new Promise((resolve, reject) => {
-        if (!window.paypal) {
-          reject(new Error('PayPal SDK not loaded'))
-          return
-        }
+      // Clear any existing buttons
+      const container = document.getElementById("paypal-button-container");
+      if (container) {
+        container.innerHTML = "";
+      }
 
-        const paypalButtonsConfig = {
-          createOrder: async (data, actions) => {
-            try {
-              const order = await this.createOrder(amount, currency, metadata)
-              return order.id // Return PayPal order ID
-            } catch (error) {
-              console.error('Error creating order:', error)
-              reject(error)
+      // Render PayPal buttons
+      window.paypal.Buttons({
+        // Create order on PayPal's servers
+        createOrder: (data, actions) => {
+          return actions.order.create({
+            purchase_units: [{
+              amount: {
+                currency_code: currency,
+                value: amount.toFixed(2)
+              },
+              description: metadata.packageDescription || `${metadata.packageType} Package`,
+              custom_id: metadata.customerEmail || "",
+            }]
+          });
+        },
+
+        // Handle successful payment
+        onApprove: async (data, actions) => {
+          try {
+            const order = await actions.order.capture();
+            console.log("✅ PayPal payment successful:", order);
+            
+            this.isLoading = false;
+            
+            if (callback) {
+              callback({
+                orderId: order.id,
+                status: order.status,
+                payer: order.payer,
+                amount: order.purchase_units[0].amount.value,
+                metadata
+              });
             }
-          },
-
-          onApprove: async (data, actions) => {
-            try {
-              // Capture the payment
-              const response = await fetch('/api/paypal/capture-order', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  orderId: data.orderID
-                })
-              })
-
-              const captureData = await response.json()
-
-              if (options.callback) {
-                options.callback(captureData)
-              }
-
-              resolve(captureData)
-            } catch (error) {
-              console.error('Error capturing payment:', error)
-              reject(error)
-            }
-          },
-
-          onError: (err) => {
-            console.error('PayPal error:', err)
-            this.error = err.message || 'PayPal payment error'
-            if (options.onClose) {
-              options.onClose()
-            }
-            reject(err)
-          },
-
-          onCancel: () => {
-            console.log('Payment cancelled by user')
-            if (options.onClose) {
-              options.onClose()
-            }
-            reject(new Error('Payment cancelled by user'))
+            
+            return order;
+          } catch (error) {
+            console.error("❌ PayPal capture error:", error);
+            this.error = error.message;
+            this.isLoading = false;
+            throw error;
           }
-        }
+        },
 
-        // Render PayPal buttons
-        window.paypal.Buttons(paypalButtonsConfig).render('#paypal-button-container')
-      })
+        // Handle cancellation
+        onCancel: (data) => {
+          console.log("⚠️ PayPal payment cancelled:", data);
+          this.isLoading = false;
+          
+          if (onClose) {
+            onClose();
+          }
+        },
+
+        // Handle errors
+        onError: (err) => {
+          console.error("❌ PayPal error:", err);
+          this.error = err.message || "PayPal payment failed";
+          this.isLoading = false;
+          
+          if (onClose) {
+            onClose();
+          }
+        },
+
+        // Styling options
+        style: {
+          layout: 'vertical',
+          color: 'blue',
+          shape: 'rect',
+          label: 'paypal'
+        }
+      }).render("#paypal-button-container");
+
+      this.isLoading = false;
     },
-
-    /**
-     * Capture PayPal order
-     * @param {string} orderId - PayPal order ID
-     * @returns {Promise<object>} Capture details
-     */
-    async captureOrder(orderId) {
-      this.isLoading = true
-      this.error = null
-
-      try {
-        const response = await fetch('/api/paypal/capture-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ orderId })
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Failed to capture PayPal order')
-        }
-
-        const data = await response.json()
-        return data
-      } catch (error) {
-        this.error = error.message
-        console.error('PayPal capture error:', error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
-    }
-  }
-})
+  },
+});

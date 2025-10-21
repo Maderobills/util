@@ -209,8 +209,8 @@ async function processPayPalPayment(packageData, emailValue) {
     
     // Wait for modal to render, then initialize PayPal buttons
     setTimeout(() => {
-      paypalStore.initializePayPalButtons(
-        packageData.price,
+      paypalStore.createPayment(
+        parseFloat(packageData.price),
         'USD',
         {
           packageType: packageData.type,

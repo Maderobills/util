@@ -6,22 +6,22 @@ import { usePaystackStore } from '@/stores/paystack'
 import { useStripeStore } from '@/stores/stripe'
 import { useBinanceStore } from '@/stores/binance'
 import { usePaymongoStore } from '@/stores/paymongo'
-import { useMoneyGramStore } from '@/stores/moneygram'
+import { useXenditStore } from '@/stores/xendit'
 
 const paystackStore = usePaystackStore()
 const stripeStore = useStripeStore()
 const binanceStore = useBinanceStore()
 const paymongoStore = usePaymongoStore()
-const moneygramStore = useMoneyGramStore()  // ✅ NEW
+const xenditStore = useXenditStore()
 
 onMounted(() => {
   console.log('=== Environment Variables Debug ===')
   console.log('All env vars:', import.meta.env)
   console.log('Binance API Key:', import.meta.env.VITE_BINANCE_API_KEY)
   console.log('Paymongo Public Key:', import.meta.env.VITE_PAYMONGO_PUBLIC_KEY)
-  console.log('MoneyGram API Key:', import.meta.env.VITE_MONEYGRAM_API_KEY)
+  console.log('Xendit API Key:', import.meta.env.VITE_XENDIT_API_KEY)
   console.log('Binance Secret exists:', !!import.meta.env.VITE_BINANCE_API_SECRET)
-  console.log('MoneyGram Secret exists:', !!import.meta.env.VITE_MONEYGRAM_API_SECRET)
+  console.log('Xendit Secret exists:', !!import.meta.env.VITE_XENDIT_SECRET_KEY)
   console.log('==================================')
 })
 
@@ -54,10 +54,10 @@ function selectPackage(packageData) {
       .then((res) => console.log("PayMongo payment success:", res))
       .catch((err) => console.error("PayMongo payment failed:", err.message))
   }
-  else if (paymentMethod.value === 'moneygram') {
-    processMoneygramPayment(packageData, email)
-      .then((res) => console.log("MoneyGram payment success:", res))
-      .catch((err) => console.error("MoneyGram payment failed:", err.message))
+  else if (paymentMethod.value === 'xendit') {
+    processXenditPayment(packageData, email)
+      .then((res) => console.log("Xendit payment success:", res))
+      .catch((err) => console.error("Xendit payment failed:", err.message))
   }
 }
 
@@ -142,44 +142,29 @@ async function processPaymongoPayment(packageData) {
   }
 }
 
-// ✅ Process payment with MoneyGram
-async function processMoneygramPayment(packageData, emailValue) {
+// Process payment with Xendit
+async function processXenditPayment(packageData, emailValue) {
   try {
-    const sender = {
-      name: emailValue.split("@")[0],
-      email: emailValue,
-    }
-
-    const receiver = {
-      name: "Receiver Name",  // You can prompt the user for this
-      country: "Philippines",
-    }
-
-    // Call your backend through the Pinia store
-    const response = await moneygramStore.sendMoney(
+    const response = await xenditStore.createInvoice(
       packageData.price,
-      "USD",
-      receiver,
-      sender
+      'PHP', // or 'USD' depending on your backend setup
+      { email: emailValue },
+      `${packageData.type} - ${packageData.description}`
     )
 
-    console.log("MoneyGram response:", response)
+    console.log('✅ Xendit response:', response)
 
-    if (response.status === "pending") {
-      // Show transaction info to the user
-      alert(
-        `✅ Transaction Created!\nReference: ${response.transactionId}\nPlease complete payment at any MoneyGram agent.\nEstimated arrival: ${new Date(
-          response.estimatedArrival
-        ).toLocaleString()}`
-      )
+    if (response.invoice_url) {
+      // Redirect user to Xendit payment page
+      window.location.href = response.invoice_url
     } else {
-      alert(`Payment status: ${response.status}`)
+      throw new Error('No invoice URL received from Xendit')
     }
 
     return response
   } catch (error) {
-    console.error("MoneyGram payment error:", error)
-    alert(`MoneyGram payment failed: ${error.message}`)
+    console.error('❌ Xendit payment error:', error)
+    alert(`Payment failed: ${error.message}`)
     throw error
   }
 }
@@ -239,15 +224,15 @@ async function processMoneygramPayment(packageData, emailValue) {
         Pay with PayMongo
       </button>
       <button
-        @click="paymentMethod = 'moneygram'"
+        @click="paymentMethod = 'xendit'"
         :class="[
           'px-6 py-2 rounded-lg font-semibold transition-colors',
-          paymentMethod === 'moneygram'
-            ? 'bg-red-600 text-white'
+          paymentMethod === 'xendit'
+            ? 'bg-teal-600 text-white'
             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
         ]"
       >
-        Pay with MoneyGram
+        Pay with Xendit
       </button>
     </div>
 

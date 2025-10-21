@@ -54,7 +54,7 @@ function selectPackage(packageData) {
       .then((res) => console.log("PayMongo payment success:", res))
       .catch((err) => console.error("PayMongo payment failed:", err.message))
   }
-  else if (paymentMethod.value === 'xendit') {
+  else  if (paymentMethod.value === 'xendit') {
     processXenditPayment(packageData, email)
       .then((res) => console.log("Xendit payment success:", res))
       .catch((err) => console.error("Xendit payment failed:", err.message))
@@ -147,7 +147,7 @@ async function processXenditPayment(packageData, emailValue) {
   try {
     const response = await xenditStore.createInvoice(
       packageData.price,
-      'PHP', // or 'USD' depending on your backend setup
+      'PHP', // Currency: PHP, USD, IDR, etc.
       { email: emailValue },
       `${packageData.type} - ${packageData.description}`
     )

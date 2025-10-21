@@ -8,10 +8,37 @@ export const useXenditStore = defineStore("xendit", {
     xenditPublicKey: import.meta.env.VITE_XENDIT_PUBLIC_KEY || null,
   }),
 
+  getters: {
+    isTestMode: (state) => state.xenditPublicKey?.includes('development'),
+    hasValidKey: (state) => state.xenditPublicKey?.startsWith('xnd_public_'),
+  },
+
   actions: {
     /**
-     * Create a Xendit invoice using Xendit.js (client-side)
-     * @param {number} amount - Amount to charge
+     * Initialize and validate Xendit configuration
+     */
+    validateConfig() {
+      console.log('=== Xendit Client Configuration ===');
+      console.log('Public Key exists:', !!this.xenditPublicKey);
+      console.log('Key prefix:', this.xenditPublicKey?.substring(0, 25) + '...');
+      console.log('Valid format:', this.hasValidKey);
+      console.log('Test mode:', this.isTestMode);
+      console.log('===================================');
+
+      if (!this.xenditPublicKey) {
+        throw new Error("Xendit public key not configured in .env file");
+      }
+
+      if (!this.hasValidKey) {
+        throw new Error("Invalid Xendit public key format. Must start with 'xnd_public_'");
+      }
+
+      return true;
+    },
+
+    /**
+     * Create a Xendit invoice
+     * @param {number} amount - Amount to charge (in smallest currency unit)
      * @param {string} currency - Currency code (e.g., 'PHP', 'USD', 'IDR')
      * @param {object} payer - Payer object with email property
      * @param {string} description - Payment description
@@ -21,42 +48,45 @@ export const useXenditStore = defineStore("xendit", {
       this.error = null;
 
       try {
-        if (!this.xenditPublicKey) {
-          throw new Error("Xendit public key not configured");
+        // Validate configuration
+        this.validateConfig();
+
+        // Validate inputs
+        if (!amount || amount <= 0) {
+          throw new Error("Invalid amount");
         }
 
-        // Initialize Xendit with public key
-        if (typeof Xendit === 'undefined') {
-          throw new Error("Xendit.js library not loaded");
+        const email = payer?.email || payer;
+        if (!email || !email.includes('@')) {
+          throw new Error("Valid email is required");
         }
 
-        Xendit.setPublishableKey(this.xenditPublicKey);
+        console.log('💳 Creating invoice:', { amount, currency, email, description });
 
-        // Create invoice via backend (still needs backend for invoice creation)
+        // Create invoice via backend
         const response = await fetch("http://localhost:3001/api/xendit/create-invoice", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount,
             currency: currency || 'PHP',
-            payer: {
-              email: payer.email || payer
-            },
+            payer: { email },
             description,
           }),
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Server error: ${response.status}`);
+          throw new Error(result.error || `Server error: ${response.status}`);
         }
 
-        const result = await response.json();
         this.transaction = result;
+        console.log('✅ Invoice created:', result.id);
         
         return result;
       } catch (err) {
-        console.error("Xendit invoice creation failed:", err);
+        console.error("❌ Xendit invoice creation failed:", err);
         this.error = err.message;
         throw err;
       } finally {
@@ -75,23 +105,29 @@ export const useXenditStore = defineStore("xendit", {
       this.error = null;
 
       try {
-        if (!this.xenditPublicKey) {
-          throw new Error("Xendit public key not configured");
-        }
+        this.validateConfig();
 
         if (typeof Xendit === 'undefined') {
-          throw new Error("Xendit.js library not loaded");
+          throw new Error("Xendit.js library not loaded. Add <script src='https://js.xendit.co/v1/xendit.min.js'></script> to your HTML");
         }
 
         Xendit.setPublishableKey(this.xenditPublicKey);
 
+        console.log('🔐 Creating card token...');
+
         // Create card token using public key (client-side)
         const tokenData = await new Promise((resolve, reject) => {
           Xendit.card.createToken(cardData, (err, token) => {
-            if (err) reject(err);
-            else resolve(token);
+            if (err) {
+              console.error('Token creation error:', err);
+              reject(new Error(err.message || 'Card tokenization failed'));
+            } else {
+              resolve(token);
+            }
           });
         });
+
+        console.log('✅ Token created:', tokenData.id);
 
         // Send token to backend for charge
         const response = await fetch("http://localhost:3001/api/xendit/charge-card", {
@@ -104,17 +140,18 @@ export const useXenditStore = defineStore("xendit", {
           }),
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Server error: ${response.status}`);
+          throw new Error(result.error || `Server error: ${response.status}`);
         }
 
-        const result = await response.json();
         this.transaction = result;
+        console.log('✅ Card charged successfully');
         
         return result;
       } catch (err) {
-        console.error("Card payment failed:", err);
+        console.error("❌ Card payment failed:", err);
         this.error = err.message;
         throw err;
       } finally {
@@ -131,6 +168,12 @@ export const useXenditStore = defineStore("xendit", {
       this.error = null;
 
       try {
+        if (!invoiceId) {
+          throw new Error("Invoice ID is required");
+        }
+
+        console.log('🔍 Checking invoice status:', invoiceId);
+
         const response = await fetch(
           `http://localhost:3001/api/xendit/status/${invoiceId}`
         );
@@ -141,7 +184,9 @@ export const useXenditStore = defineStore("xendit", {
           throw new Error(data.error || "Failed to fetch status");
         }
 
-        this.transaction = { ...this.transaction, status: data.status };
+        this.transaction = { ...this.transaction, ...data };
+        console.log('✅ Status:', data.status);
+        
         return data;
       } catch (err) {
         console.error("⚠️ Error checking Xendit invoice status:", err);
@@ -150,6 +195,14 @@ export const useXenditStore = defineStore("xendit", {
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * Clear transaction data
+     */
+    clearTransaction() {
+      this.transaction = null;
+      this.error = null;
     },
   },
 });
